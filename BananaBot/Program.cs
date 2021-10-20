@@ -46,6 +46,10 @@ namespace BananaBot
                 client.Ready += ReadyAsync;
                 services.GetRequiredService<CommandService>().Log += LogAsync;
 
+                // Read from the data file
+                JSONHandler data = new JSONHandler();
+                await data.readJSON();
+
                 // this is where we get the Token value from the configuration file, and start the bot
                 await client.LoginAsync(TokenType.Bot, _config["token"]);
                 await client.StartAsync();

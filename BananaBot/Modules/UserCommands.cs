@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -8,49 +9,48 @@ namespace BananaBot.Modules
     public class UserCommands : ModuleBase
     {
 
+        private JSONHandler data = new JSONHandler();
+
         [Command("adduser")]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task addUser()
+        public async Task AddUser(IUser user, string emoteStr)
         {
-            string msg = Context.Message.Content;
-            string param = Util.Substring(msg, msg.LastIndexOf(' '), msg.Length);
-            IReadOnlyCollection<ulong> users = Context.Message.MentionedUserIds;
-            foreach (ulong id in users)
+            if (user is null)
             {
-                if (Global.userList.ContainsKey(id))
-                {
-                    Global.userList.Remove(id);
-                }
-                Global.userList.Add(id, param);
+                throw new ArgumentNullException(nameof(user));
             }
-            
-            await ReplyAsync("Added "+users.Count);
+
+            if (Global.userList.ContainsKey(user.Id))
+            {
+                Global.userList.Remove(user.Id);
+            }
+            Global.userList.Add(user.Id, emoteStr);
+
+            data.updateJSON(Global.userList);
+
+            Emoji emote = new Emoji(emoteStr);
+            await ReplyAsync("Added "+user.Username+ " with "+emote);
         }
 
         [Command("rmuser")]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task rmUser()
+        public async Task RmUser(IUser user)
         {
-            string msg = Context.Message.Content;
-            string param = Util.Substring(msg, msg.LastIndexOf(' '), msg.Length);
-            IReadOnlyCollection<ulong> users = Context.Message.MentionedUserIds;
-            foreach (ulong id in users)
+            if (Global.userList.ContainsKey(user.Id))
             {
-                if (Global.userList.ContainsKey(id))
-                {
-                    Global.userList.Remove(id);
-                }
+                Global.userList.Remove(user.Id);
             }
 
-            await ReplyAsync("Removed " + users.Count);
+            data.updateJSON(Global.userList);
+            await ReplyAsync("Removed " + user.Username);
         }
 
         [Command("clearall")]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task clearAll()
+        public async Task ClearAll()
         {
             Global.userList.Clear();
-
+            data.updateJSON(Global.userList);
             await ReplyAsync("All users cleared");
         }
     }

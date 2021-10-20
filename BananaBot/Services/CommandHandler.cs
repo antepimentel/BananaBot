@@ -56,8 +56,8 @@ namespace BananaBot.Services
             // Handle message reaction
             if (Global.userList.Contains(message.Author.Id))
             {
-              //  Emoji emote = new Emoji((string)CmdUser.userTable[message.Author.Id]);
-              //  await message.AddReactionAsync(emote);
+                Emoji emote = new Emoji((string)Global.userList[message.Author.Id]);
+                await message.AddReactionAsync(emote);
             }
 
 
@@ -66,6 +66,7 @@ namespace BananaBot.Services
 
             // get prefix from the configuration file
             char prefix = Char.Parse(_config["prefix"]);
+            //char prefix = '!';
 
             // determine if the message has a valid prefix, and adjust argPos based on prefix
             if (!(message.HasMentionPrefix(_client.CurrentUser, ref argPos) || message.HasCharPrefix(prefix, ref argPos)))
