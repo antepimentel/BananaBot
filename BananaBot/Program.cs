@@ -2,8 +2,10 @@
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.IO;
+using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
+using Discord.Commands;
+using BananaBot.Services;
 
 namespace BananaBot
 {
@@ -16,34 +18,69 @@ namespace BananaBot
         public static void Main(string[] args)
         => new Program().MainAsync().GetAwaiter().GetResult();
 
-        public async Task MainAsync()
+        public Program()
         {
-            _client = new DiscordSocketClient();
-            _client.MessageReceived += CommandHandler;
-            _client.MessageReceived += ReactHandler;
-            _client.Log += Log;
-
+            // create the configuration
             var _builder = new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "config.json");
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile(path: "config.json");
+
+            // build the configuration and assign to _config          
             _config = _builder.Build();
-
-            var token = File.ReadAllText("token.txt");
-
-            // Some alternative options would be to keep your token in an Environment Variable or a standalone file.
-            // var token = Environment.GetEnvironmentVariable("NameOfYourEnvironmentVariable");
-            // var token = File.ReadAllText("token.txt");
-            // var token = JsonConvert.DeserializeObject<AConfigurationClass>(File.ReadAllText("config.json")).Token;
-
-            await _client.LoginAsync(Discord.TokenType.Bot, token);
-            await _client.StartAsync();
-
-            // Block this task until the program is closed.
-            await Task.Delay(-1);
         }
 
-        private Task Log(Discord.LogMessage msg)
+        public async Task MainAsync()
         {
-            Console.WriteLine(msg.ToString());
+
+
+            // call ConfigureServices to create the ServiceCollection/Provider for passing around the services
+            using (var services = ConfigureServices())
+            {
+                // get the client and assign to client 
+                // you get the services vwia GetRequiredService<T>
+                var client = services.GetRequiredService<DiscordSocketClient>();
+                _client = client;
+
+                // setup logging and the ready event
+                client.Log += LogAsync;
+                client.Ready += ReadyAsync;
+                services.GetRequiredService<CommandService>().Log += LogAsync;
+
+                // this is where we get the Token value from the configuration file, and start the bot
+                await client.LoginAsync(TokenType.Bot, _config["token"]);
+                await client.StartAsync();
+
+                // we get the CommandHandler class here and call the InitializeAsync method to start things up for the CommandHandler service
+                await services.GetRequiredService<CommandHandler>().InitializeAsync();
+
+                await Task.Delay(-1);
+            }
+        }
+
+        // this method handles the ServiceCollection creation/configuration, and builds out the service provider we can call on later
+        private ServiceProvider ConfigureServices()
+        {
+            // this returns a ServiceProvider that is used later to call for those services
+            // we can add types we have access to here, hence adding the new using statement:
+            // using csharpi.Services;
+            // the config we build is also added, which comes in handy for setting the command prefix!
+            return new ServiceCollection()
+                .AddSingleton(_config)
+                .AddSingleton<DiscordSocketClient>()
+                .AddSingleton<CommandService>()
+                .AddSingleton<CommandHandler>()
+                .BuildServiceProvider();
+        }
+
+        private Task LogAsync(LogMessage log)
+        {
+            Console.WriteLine(log.ToString());
+            return Task.CompletedTask;
+        }
+
+        private Task ReadyAsync()
+        {
+            Console.WriteLine($"Connected as -> [] :)");
             return Task.CompletedTask;
         }
 

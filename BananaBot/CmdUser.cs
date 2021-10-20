@@ -51,11 +51,6 @@ namespace BananaBot
             return Task.CompletedTask;
         }
 
-        public Boolean isModerator(SocketMessage message)
-        {
-            if (message.Author.Id.Equals(ducky))
-                return true;
-            else if(message.)
-        }
+       
     }
 }
